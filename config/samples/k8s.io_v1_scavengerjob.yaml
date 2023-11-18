@@ -1,0 +1,12 @@
+apiVersion: k8s.io.my.domain/v1
+kind: ScavengerJob
+metadata:
+  labels:
+    app.kubernetes.io/name: scavengerjob
+    app.kubernetes.io/instance: scavengerjob-sample
+    app.kubernetes.io/part-of: scavenger-jobs-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: scavenger-jobs-operator
+  name: scavengerjob-sample
+spec:
+  foo: bar

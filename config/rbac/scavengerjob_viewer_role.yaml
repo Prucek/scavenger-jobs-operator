@@ -1,0 +1,27 @@
+# permissions for end users to view scavengerjobs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: scavengerjob-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: scavenger-jobs-operator
+    app.kubernetes.io/part-of: scavenger-jobs-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: scavengerjob-viewer-role
+rules:
+- apiGroups:
+  - k8s.io.my.domain
+  resources:
+  - scavengerjobs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - k8s.io.my.domain
+  resources:
+  - scavengerjobs/status
+  verbs:
+  - get

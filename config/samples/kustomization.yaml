@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- k8s.io_v1_scavengerjob.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples
