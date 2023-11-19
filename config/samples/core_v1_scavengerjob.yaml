@@ -1,4 +1,4 @@
-apiVersion: k8s.io.my.domain/v1
+apiVersion: core.cerit.cz/v1
 kind: ScavengerJob
 metadata:
   labels:
@@ -10,3 +10,13 @@ metadata:
   name: scavengerjob-sample
 spec:
   foo: bar
+  job:
+    template:
+      spec:
+        containers:
+          - name: echo
+            image: busybox
+            command: ["echo", "Hello, World!"]
+        restartPolicy: Never
+    backoffLimit: 1
+

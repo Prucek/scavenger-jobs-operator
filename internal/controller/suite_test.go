@@ -32,7 +32,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	k8siov1 "my.domain/scavenger-job/api/v1"
+	core "cerit.cz/scavenger-job/api/v1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -72,7 +72,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = k8siov1.AddToScheme(scheme.Scheme)
+	err = core.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme

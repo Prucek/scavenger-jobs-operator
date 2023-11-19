@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	batch "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -29,13 +30,15 @@ type ScavengerJobSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of ScavengerJob. Edit scavengerjob_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Foo string        `json:"foo,omitempty"`
+	Job batch.JobSpec `json:"job"`
 }
 
 // ScavengerJobStatus defines the observed state of ScavengerJob
 type ScavengerJobStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Job batch.JobStatus `json:"job,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -46,7 +49,7 @@ type ScavengerJob struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ScavengerJobSpec   `json:"spec,omitempty"`
+	Spec   ScavengerJobSpec   `json:"spec"`
 	Status ScavengerJobStatus `json:"status,omitempty"`
 }
 

@@ -2,19 +2,19 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: my.domain
+domain: cerit.cz
 layout:
 - go.kubebuilder.io/v4
 projectName: scavenger-jobs-operator
-repo: my.domain/scavenger-job
+repo: cerit.cz/scavenger-job
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: my.domain
-  group: k8s.io
+  domain: cerit.cz
+  group: core
   kind: ScavengerJob
-  path: my.domain/scavenger-job/api/v1
+  path: cerit.cz/scavenger-job/api/v1
   version: v1
 version: "3"

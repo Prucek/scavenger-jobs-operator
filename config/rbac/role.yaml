@@ -5,7 +5,16 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - k8s.io.my.domain
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+- apiGroups:
+  - core.cerit.cz
   resources:
   - scavengerjobs
   verbs:
@@ -17,13 +26,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - k8s.io.my.domain
+  - core.cerit.cz
   resources:
   - scavengerjobs/finalizers
   verbs:
   - update
 - apiGroups:
-  - k8s.io.my.domain
+  - core.cerit.cz
   resources:
   - scavengerjobs/status
   verbs:
