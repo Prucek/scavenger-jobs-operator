@@ -1,0 +1,16 @@
+apiVersion: core.cerit.cz/v1
+kind: ScavengerJob
+metadata:
+  name: sleepy-scavengerjob
+spec:
+  foo: sleepy
+  job:
+    template:
+      spec:
+        containers:
+          - name: sleep
+            image: busybox
+            command: ["sleep", "infinity"]
+        restartPolicy: Never
+    backoffLimit: 1
+
