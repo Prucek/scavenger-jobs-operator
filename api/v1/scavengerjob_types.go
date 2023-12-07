@@ -38,8 +38,25 @@ type ScavengerJobSpec struct {
 type ScavengerJobStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Job batch.JobStatus `json:"job,omitempty"`
+
+	// Job                    batch.JobStatus        `json:"job,omitempty"`
+	Status                 ScavengerJobStatusType `json:"status,omitempty"`
+	StartTime              *metav1.Time           `json:"startTime,omitempty"`
+	InterruptionTimeStamps []metav1.Time          `json:"interruptionTimeStamps,omitempty"`
+	RunningTimeStamps      []metav1.Time          `json:"runningTimeStamps,omitempty"`
+	CompletionTimeStamp    *metav1.Time           `json:"completionTimeStamp,omitempty"`
 }
+
+type ScavengerJobStatusType string
+
+const (
+	ScavengerJobStatusTypeNotStarted  ScavengerJobStatusType = "Not Started"
+	ScavengerJobStatusTypePending     ScavengerJobStatusType = "Pending"
+	ScavengerJobStatusTypeRunning     ScavengerJobStatusType = "Running"
+	ScavengerJobStatusTypeInterrupted ScavengerJobStatusType = "Interrupted"
+	ScavengerJobStatusTypeCompleted   ScavengerJobStatusType = "Completed"
+	ScavengerJobStatusTypeFailing     ScavengerJobStatusType = "Failing"
+)
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
