@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,33 +41,39 @@ type ScavengerJobReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+var (
+	THIRTYSEC = ctrl.Result{RequeueAfter: time.Second * 30}
+	THRESHOLD = 0.7
+)
+
 //+kubebuilder:rbac:groups=core.cerit.cz,resources=scavengerjobs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.cerit.cz,resources=scavengerjobs/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core.cerit.cz,resources=scavengerjobs/finalizers,verbs=update
 //+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;delete
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;delete
+//+kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch
 
 func (r *ScavengerJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-
 	r.Log = log.FromContext(ctx)
 
-	if r.isClusterBusy(ctx) {
+	if r.isClusterBusy(ctx, 0) {
 		r.Log.Info("Cluster is busy, not creating new jobs")
 		if err := r.deleteJobCandidates(ctx); err != nil {
 			r.Log.Error(err, "unable to delete Job candidates")
 		}
-		return ctrl.Result{RequeueAfter: time.Second * 30}, nil
+		return THIRTYSEC, nil
 	}
 
 	scavengerJob := &sjapi.ScavengerJob{}
 	if err := r.Get(ctx, req.NamespacedName, scavengerJob); err != nil {
 		r.Log.Error(err, "unable to fetch ScavengerJob")
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		return THIRTYSEC, client.IgnoreNotFound(err)
 	}
+	//add check if failed or completed and do nothing then
 	deepCopiedScavengerJob := scavengerJob.DeepCopy()
 	if deepCopiedScavengerJob.Spec.Job.Template.Spec.Containers == nil {
 		r.Log.Info("Wrong Job Spec, skipping")
-		return ctrl.Result{}, nil
+		return THIRTYSEC, nil
 	}
 	if deepCopiedScavengerJob.Status.StartTime == nil ||
 		deepCopiedScavengerJob.Status.Status == sjapi.ScavengerJobStatusTypeInterrupted {
@@ -75,14 +82,14 @@ func (r *ScavengerJobReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	} else {
 		r.Log.Info("Job for Scavenger Job found, updating status")
-		return r.updateStatus(ctx, deepCopiedScavengerJob)
+		return r.propagatePodStatus(ctx, deepCopiedScavengerJob)
 	}
 }
 
 func (r *ScavengerJobReconciler) createJob(ctx context.Context, scavengerJob *sjapi.ScavengerJob, req ctrl.Request) (ctrl.Result, error) {
-	if r.wouldClusterBeBusy(ctx) {
+	if r.isClusterBusy(ctx, 1) {
 		r.Log.Info("Cluster would be busy, not creating new jobs")
-		return ctrl.Result{}, nil
+		return THIRTYSEC, nil
 	}
 
 	job := &batch.Job{
@@ -96,17 +103,14 @@ func (r *ScavengerJobReconciler) createJob(ctx context.Context, scavengerJob *sj
 		},
 		Spec: scavengerJob.Spec.Job,
 	}
-
 	if err := ctrl.SetControllerReference(scavengerJob, job, r.Scheme); err != nil {
 		r.Log.Error(err, "unable to set controller reference for Job", "job", job)
-		return ctrl.Result{}, err
+		return THIRTYSEC, err
 	}
-
 	if err := r.Create(ctx, job); err != nil {
 		r.Log.Error(err, "unable to create Job for ScavengerJob", "job", scavengerJob.Spec.Job)
-		return ctrl.Result{}, err
+		return THIRTYSEC, err
 	}
-
 	wait.PollUntilContextTimeout(ctx, 100*time.Millisecond, 3*time.Second, false, func(ctx context.Context) (bool, error) {
 		if err := r.Get(ctx, req.NamespacedName, job); err != nil {
 			r.Log.Error(err, "unable to get created job", "job", job)
@@ -117,6 +121,7 @@ func (r *ScavengerJobReconciler) createJob(ctx context.Context, scavengerJob *sj
 		}
 		return false, nil
 	})
+	// Update scavenger job status
 	if scavengerJob.Status.Status == sjapi.ScavengerJobStatusTypeInterrupted {
 		r.Log.Info("ScavengerJob was interrupted, recreating job")
 		scavengerJob.Status.Status = sjapi.ScavengerJobStatusTypeRunning
@@ -126,26 +131,25 @@ func (r *ScavengerJobReconciler) createJob(ctx context.Context, scavengerJob *sj
 	}
 	scavengerJob.Status.RunningTimeStamps = append(scavengerJob.Status.RunningTimeStamps, *job.Status.StartTime)
 	if err := r.Status().Update(ctx, scavengerJob); err != nil {
-		return ctrl.Result{}, err
+		return THIRTYSEC, err
 	}
-	return ctrl.Result{RequeueAfter: time.Second * 30}, nil
+	return THIRTYSEC, nil
 }
 
-func (r *ScavengerJobReconciler) updateStatus(ctx context.Context, scavengerJob *sjapi.ScavengerJob) (ctrl.Result, error) {
+func (r *ScavengerJobReconciler) propagatePodStatus(ctx context.Context, scavengerJob *sjapi.ScavengerJob) (ctrl.Result, error) {
 	pods := &corev1.PodList{}
-
 	if err := r.List(ctx, pods, client.MatchingLabels{"job-name": scavengerJob.Name}); err != nil {
 		r.Log.Error(err, "unable to list pods", "pods", pods)
-		return ctrl.Result{}, err
+		return THIRTYSEC, err
 	}
 	if len(pods.Items) == 0 {
 		r.Log.Info("No pods found, should't happen")
-		// jobs was probably deleted, we have to restart the job?
-		return ctrl.Result{}, nil
+		// jobs was probably deleted, we have to restart the job? or failing? and let it be
+		return THIRTYSEC, nil
 	}
 	if len(pods.Items) > 1 {
 		r.Log.Info("More than one pod found, should't happen")
-		return ctrl.Result{}, nil
+		return THIRTYSEC, nil
 	}
 	pod := pods.Items[0]
 	switch pod.Status.Phase {
@@ -163,68 +167,52 @@ func (r *ScavengerJobReconciler) updateStatus(ctx context.Context, scavengerJob 
 	if err := r.Status().Update(ctx, scavengerJob); err != nil {
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{RequeueAfter: time.Second * 30}, nil
+	return THIRTYSEC, nil
 }
 
-// TODO: retriece metrics and check if cluster is busy
-func (r *ScavengerJobReconciler) isClusterBusy(ctx context.Context) bool {
-	// DUMMY IMPLEMENTATION
-	jobs := batch.JobList{}
-	if err := r.List(ctx, &jobs); err != nil {
-		r.Log.Error(err, "unable to list pods")
-	}
-	if len(jobs.Items) > 3 {
-		return true
-	}
-	return false
-}
-
-func (r *ScavengerJobReconciler) wouldClusterBeBusy(ctx context.Context) bool {
-	// DUMMY IMPLEMENTATION
-	jobs := batch.JobList{}
-	if err := r.List(ctx, &jobs); err != nil {
-		r.Log.Error(err, "unable to list jobs")
-	}
-	if len(jobs.Items) > 2 {
-		return true
-	}
-	return false
-}
-
-// TODO: add pod priority and preemption
-func (r *ScavengerJobReconciler) deleteJobCandidates(ctx context.Context) error {
-	// DUMMY IMPLEMENTATION
-	sjs := &sjapi.ScavengerJobList{}
-	if err := r.List(ctx, sjs); err != nil {
-		r.Log.Error(err, "unable to list ScavengerJobs")
-		return err
-	}
-	// get first name - TODO: get the one with the lowest priority
-	if len(sjs.Items) == 0 {
-		r.Log.Info("No ScavengerJobs found, nothing to delete")
-		return nil
-	}
-
-	candidateScavengerJob := &sjapi.ScavengerJob{}
-	for _, sj := range sjs.Items {
-		if sj.Status.Status == sjapi.ScavengerJobStatusTypeRunning {
-			candidateScavengerJob = sj.DeepCopy()
-			break
+func getNodePodCapacity(node *corev1.Node) int {
+	podCapacity := 0
+	for resourceName, allocatable := range node.Status.Allocatable {
+		if resourceName == corev1.ResourcePods {
+			podCapacity = int(allocatable.Value())
 		}
 	}
+	return podCapacity
+}
 
+func (r *ScavengerJobReconciler) isClusterBusy(ctx context.Context, addend int) bool {
+	pods := &corev1.PodList{}
+	if err := r.List(ctx, pods); err != nil {
+		r.Log.Error(err, "unable to list pods")
+	}
+	nodeName := types.NamespacedName{
+		Name:      pods.Items[0].Spec.NodeName,
+		Namespace: pods.Items[0].Namespace,
+	}
+	node := corev1.Node{}
+	if err := r.Get(ctx, nodeName, &node); err != nil {
+		r.Log.Error(err, "unable to get node")
+		return false
+	}
+	maxPodCount := getNodePodCapacity(&node)
+	return float64(len(pods.Items)+addend) > float64(maxPodCount)*THRESHOLD
+}
+
+func (r *ScavengerJobReconciler) deleteJobCandidates(ctx context.Context) error {
+	candidateScavengerJob, err := r.getDeleteCandidate(ctx)
+	if err != nil {
+		return err
+	}
 	if candidateScavengerJob.Status.Status != sjapi.ScavengerJobStatusTypeRunning {
 		r.Log.Info("No running ScavengerJobs found, nothing to delete")
 		return nil
 	}
-
-	r.Log.Info("Deleting job of Scavenger Job", "ScavengerJob", candidateScavengerJob.Name)
 	jobToBeDeleted := &batch.Job{}
-	if err := r.Get(ctx, client.ObjectKey{Namespace: candidateScavengerJob.Namespace, Name: candidateScavengerJob.Name},
-		jobToBeDeleted); err != nil {
+	if err := r.Get(ctx, client.ObjectKey{Namespace: candidateScavengerJob.Namespace, Name: candidateScavengerJob.Name}, jobToBeDeleted); err != nil {
 		r.Log.Error(err, "unable to get Job", "job", candidateScavengerJob.Name)
 		return err
 	}
+
 	deepCopiedJobToBeDeleted := jobToBeDeleted.DeepCopy()
 	deletePolicy := metav1.DeletePropagationBackground
 	zero := int64(0)
@@ -232,6 +220,7 @@ func (r *ScavengerJobReconciler) deleteJobCandidates(ctx context.Context) error 
 		PropagationPolicy:  &deletePolicy,
 		GracePeriodSeconds: &zero,
 	}
+	r.Log.Info("Deleting job of Scavenger Job", "ScavengerJob", candidateScavengerJob.Name)
 	if err := r.Delete(ctx, deepCopiedJobToBeDeleted, &deleteOptions); err != nil {
 		r.Log.Error(err, "unable to delete Job", "job", candidateScavengerJob.Name)
 		return err
@@ -244,6 +233,28 @@ func (r *ScavengerJobReconciler) deleteJobCandidates(ctx context.Context) error 
 		return err
 	}
 	return nil
+}
+
+func (r *ScavengerJobReconciler) getDeleteCandidate(ctx context.Context) (*sjapi.ScavengerJob, error) {
+	sjs := &sjapi.ScavengerJobList{}
+	if err := r.List(ctx, sjs); err != nil {
+		r.Log.Error(err, "unable to list ScavengerJobs")
+		return nil, err
+	}
+
+	if len(sjs.Items) == 0 {
+		r.Log.Info("No ScavengerJobs found, nothing to delete")
+		return nil, nil
+	}
+	// TODO: get the one with the lowest priority
+	candidateScavengerJob := &sjapi.ScavengerJob{}
+	for _, sj := range sjs.Items {
+		if sj.Status.Status == sjapi.ScavengerJobStatusTypeRunning {
+			candidateScavengerJob = sj.DeepCopy()
+			break
+		}
+	}
+	return candidateScavengerJob, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

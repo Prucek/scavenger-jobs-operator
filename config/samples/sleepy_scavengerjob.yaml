@@ -1,7 +1,7 @@
 apiVersion: core.cerit.cz/v1
 kind: ScavengerJob
 metadata:
-  name: sleepy-scavengerjob
+  name: sleepy-scavengerjob-COUNT
 spec:
   foo: sleepy
   job:
@@ -11,6 +11,8 @@ spec:
           - name: sleep
             image: busybox
             command: ["sleep", "infinity"]
+            imagePullPolicy: Never
         restartPolicy: Never
+        priorityClassName: low-priority-sj-nonpreempting
     backoffLimit: 1
 

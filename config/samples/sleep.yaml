@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: sleep-infinity
+  name: sleep-infinity-COUNT
 spec:
   template:
     spec:

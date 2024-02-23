@@ -1,8 +1,12 @@
 # scavenger-jobs-operator
-// TODO(user): Add simple overview of use/purpose
+Scavenger Jobs Operator is a Kubernetes operator that manages the lifecycle of Scavenger Jobs (SJ) in a Kubernetes cluster.
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+Cloud environments are notorious for suffering from low utilization versus reservations. Scavenger Job (hereinafter only SJ)
+is a job that serves to increase the utilization of cluster resources by consuming free resources (which can be reserved, but are
+not currently used), but if a request for the use of these reserved resources comes to the cluster from the "owner" of the reservation,
+(for us the abstraction "any workload that has a higher priority than SJ"), so SJ is interrupted, frees resources and takes them
+workload with a higher priority. All SJs have a lower priority than all other types of workloads in the cluster.
 
 ## Getting Started
 
@@ -39,10 +43,11 @@ make deploy IMG=<some-registry>/scavenger-jobs-operator:tag
 privileges or be logged in as admin.
 
 **Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
 
+These scripts will help you create multiple jobs/ SJ and mimic the behaviour of a busy node.
 ```sh
-kubectl apply -k config/samples/
+./hack/jobrunner_sleep.sh 20 
+./hack/jobrunner.sh 4  
 ```
 
 >**NOTE**: Ensure that the samples has default values to test it out.

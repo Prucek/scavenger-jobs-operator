@@ -121,7 +121,7 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 ##@ Deployment
 
 ifndef ignore-not-found
-  ignore-not-found = false
+  ignore-not-found = true
 endif
 
 .PHONY: install
