@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	k8siov1 "cerit.cz/scavenger-job/api/v1"
+	sjapi "cerit.cz/scavenger-job/api/v1"
 	"cerit.cz/scavenger-job/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
@@ -45,7 +45,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(k8siov1.AddToScheme(scheme))
+	utilruntime.Must(sjapi.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -95,6 +95,12 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ScavengerJob")
 		os.Exit(1)
+	}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&sjapi.ScavengerJob{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ScavengerJob")
+			os.Exit(1)
+		}
 	}
 	//+kubebuilder:scaffold:builder
 

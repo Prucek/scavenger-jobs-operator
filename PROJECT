@@ -17,4 +17,8 @@ resources:
   kind: ScavengerJob
   path: cerit.cz/scavenger-job/api/v1
   version: v1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
 version: "3"

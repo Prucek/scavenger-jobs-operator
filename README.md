@@ -20,7 +20,7 @@ workload with a higher priority. All SJs have a lower priority than all other ty
 **Build and push your image to the location specified by `IMG`:**
 
 ```sh
-make docker-build docker-push IMG=<some-registry>/scavenger-jobs-operator:tag
+make docker-build docker-push IMG=peterocker/scavenger-jobs:latest 
 ```
 
 **NOTE:** This image ought to be published in the personal registry you specified. 
@@ -36,7 +36,7 @@ make install
 **Deploy the Manager to the cluster with the image specified by `IMG`:**
 
 ```sh
-make deploy IMG=<some-registry>/scavenger-jobs-operator:tag
+make deploy IMG=peterocker/scavenger-jobs:latest 
 ```
 
 > **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin 
@@ -70,6 +70,16 @@ make uninstall
 ```sh
 make undeploy
 ```
+
+**Deploy the cert-manager with self-signed certificate needed for the webhook:**
+
+```sh
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.3/cert-manager.yaml
+kubectl create ns scavenger-jobs-operator-system
+kubectl apply -f ./config/certmanager/certificate.yaml
+make deploy IMG=peterocker/scavenger-jobs:latest 
+```
+
 
 ## Contributing
 // TODO(user): Add detailed information on how you would like others to contribute to this project
