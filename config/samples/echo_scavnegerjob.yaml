@@ -1,0 +1,17 @@
+apiVersion: core.cerit.cz/v1
+kind: ScavengerJob
+metadata:
+  name: echo-scavengerjob
+spec:
+  foo: echo
+  job:
+    template:
+      spec:
+        containers:
+          - name: echo
+            image: busybox
+            command: ["echo", "Hello World!"]
+            imagePullPolicy: Never
+        restartPolicy: Never
+        priorityClassName: low-priority-sj-nonpreempting
+    backoffLimit: 1

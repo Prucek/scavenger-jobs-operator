@@ -25,13 +25,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	sjapi "cerit.cz/scavenger-job/api/v1"
+	"cerit.cz/scavenger-job/pkg/node"
 )
 
 // ScavengerJobReconciler reconciles a ScavengerJob object
@@ -43,7 +43,6 @@ type ScavengerJobReconciler struct {
 
 var (
 	THIRTYSEC = ctrl.Result{RequeueAfter: time.Second * 30}
-	THRESHOLD = 0.7
 )
 
 //+kubebuilder:rbac:groups=core.cerit.cz,resources=scavengerjobs,verbs=get;list;watch;create;update;patch;delete
@@ -56,7 +55,7 @@ var (
 func (r *ScavengerJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.Log = log.FromContext(ctx)
 
-	if r.isClusterBusy(ctx, 0) {
+	if node.IsClusterBusy(ctx, r.Client, 0, r.Log) {
 		r.Log.Info("Cluster is busy, not creating new jobs")
 		if err := r.deleteJobCandidates(ctx); err != nil {
 			r.Log.Error(err, "unable to delete Job candidates")
@@ -87,7 +86,7 @@ func (r *ScavengerJobReconciler) Reconcile(ctx context.Context, req ctrl.Request
 }
 
 func (r *ScavengerJobReconciler) createJob(ctx context.Context, scavengerJob *sjapi.ScavengerJob, req ctrl.Request) (ctrl.Result, error) {
-	if r.isClusterBusy(ctx, 1) {
+	if node.IsClusterBusy(ctx, r.Client, 1, r.Log) {
 		r.Log.Info("Cluster would be busy, not creating new jobs")
 		return THIRTYSEC, nil
 	}
@@ -168,34 +167,6 @@ func (r *ScavengerJobReconciler) propagatePodStatus(ctx context.Context, scaveng
 		return ctrl.Result{}, err
 	}
 	return THIRTYSEC, nil
-}
-
-func getNodePodCapacity(node *corev1.Node) int {
-	podCapacity := 0
-	for resourceName, allocatable := range node.Status.Allocatable {
-		if resourceName == corev1.ResourcePods {
-			podCapacity = int(allocatable.Value())
-		}
-	}
-	return podCapacity
-}
-
-func (r *ScavengerJobReconciler) isClusterBusy(ctx context.Context, addend int) bool {
-	pods := &corev1.PodList{}
-	if err := r.List(ctx, pods); err != nil {
-		r.Log.Error(err, "unable to list pods")
-	}
-	nodeName := types.NamespacedName{
-		Name:      pods.Items[0].Spec.NodeName,
-		Namespace: pods.Items[0].Namespace,
-	}
-	node := corev1.Node{}
-	if err := r.Get(ctx, nodeName, &node); err != nil {
-		r.Log.Error(err, "unable to get node")
-		return false
-	}
-	maxPodCount := getNodePodCapacity(&node)
-	return float64(len(pods.Items)+addend) > float64(maxPodCount)*THRESHOLD
 }
 
 func (r *ScavengerJobReconciler) deleteJobCandidates(ctx context.Context) error {
