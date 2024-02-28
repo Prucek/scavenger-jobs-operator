@@ -78,7 +78,9 @@ func (r *ScavengerJobReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		deepCopiedScavengerJob.Status.Status == sjapi.ScavengerJobStatusTypeInterrupted {
 		r.Log.Info("Job for Scavenger Job not found, creating one")
 		return r.createJob(ctx, deepCopiedScavengerJob, req)
-
+	} else if deepCopiedScavengerJob.Status.Status == sjapi.ScavengerJobStatusTypeCompleted ||
+		deepCopiedScavengerJob.Status.Status == sjapi.ScavengerJobStatusTypeFailing {
+		return THIRTYSEC, nil
 	} else {
 		r.Log.Info("Job for Scavenger Job found, updating status")
 		return r.propagatePodStatus(ctx, deepCopiedScavengerJob)
@@ -102,6 +104,8 @@ func (r *ScavengerJobReconciler) createJob(ctx context.Context, scavengerJob *sj
 		},
 		Spec: scavengerJob.Spec.Job,
 	}
+	job.Spec.Template.Spec.PriorityClassName = "low-priority-sj-nonpreempting"
+
 	if err := ctrl.SetControllerReference(scavengerJob, job, r.Scheme); err != nil {
 		r.Log.Error(err, "unable to set controller reference for Job", "job", job)
 		return THIRTYSEC, err

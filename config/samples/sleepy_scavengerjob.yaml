@@ -13,6 +13,5 @@ spec:
             command: ["sleep", "infinity"]
             imagePullPolicy: Never
         restartPolicy: Never
-        priorityClassName: low-priority-sj-nonpreempting
     backoffLimit: 1
 

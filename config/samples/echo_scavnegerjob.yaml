@@ -13,5 +13,4 @@ spec:
             command: ["echo", "Hello World!"]
             imagePullPolicy: Never
         restartPolicy: Never
-        priorityClassName: low-priority-sj-nonpreempting
     backoffLimit: 1
