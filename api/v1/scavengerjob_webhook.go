@@ -65,7 +65,7 @@ var _ webhook.Validator = &ScavengerJob{}
 func (r *ScavengerJob) ValidateCreate() (admission.Warnings, error) {
 	log.Info("validate create", "name", r.Name)
 
-	if node.IsClusterBusy(context.Background(), wClient, 0, log) {
+	if busy, _ := node.IsClusterBusy(context.Background(), wClient, log); busy {
 		return admission.Warnings{"SJ not created"}, fmt.Errorf("cluster is busy, not creating new scavneger jobs")
 	}
 	return nil, nil

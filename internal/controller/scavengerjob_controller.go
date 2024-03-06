@@ -55,7 +55,7 @@ var (
 func (r *ScavengerJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.Log = log.FromContext(ctx)
 
-	if node.IsClusterBusy(ctx, r.Client, 0, r.Log) {
+	if _, shouldKill := node.IsClusterBusy(ctx, r.Client, r.Log); shouldKill {
 		r.Log.Info("Cluster is busy, not creating new jobs")
 		if err := r.deleteJobCandidates(ctx); err != nil {
 			r.Log.Error(err, "unable to delete Job candidates")
@@ -88,7 +88,7 @@ func (r *ScavengerJobReconciler) Reconcile(ctx context.Context, req ctrl.Request
 }
 
 func (r *ScavengerJobReconciler) createJob(ctx context.Context, scavengerJob *sjapi.ScavengerJob, req ctrl.Request) (ctrl.Result, error) {
-	if node.IsClusterBusy(ctx, r.Client, 1, r.Log) {
+	if busy, _ := node.IsClusterBusy(ctx, r.Client, r.Log); busy {
 		r.Log.Info("Cluster would be busy, not creating new jobs")
 		return THIRTYSEC, nil
 	}
