@@ -29,7 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// log is for logging in this package.
 var (
 	log     = logf.Log.WithName("scavengerjob-resource")
 	wClient client.Client
@@ -43,20 +42,6 @@ func (r *ScavengerJob) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
-//+kubebuilder:webhook:path=/mutate-core-cerit-cz-v1-scavengerjob,mutating=true,failurePolicy=fail,sideEffects=None,groups=core.cerit.cz,resources=scavengerjobs,verbs=create;update,versions=v1,name=mscavengerjob.kb.io,admissionReviewVersions=v1
-
-var _ webhook.Defaulter = &ScavengerJob{}
-
-// Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *ScavengerJob) Default() {
-	log.Info("default", "name", r.Name)
-
-	// TODO(user): fill in your defaulting logic.
-}
-
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-core-cerit-cz-v1-scavengerjob,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.cerit.cz,resources=scavengerjobs,verbs=create;update;delete,versions=v1,name=vscavengerjob.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &ScavengerJob{}
@@ -64,25 +49,26 @@ var _ webhook.Validator = &ScavengerJob{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *ScavengerJob) ValidateCreate() (admission.Warnings, error) {
 	log.Info("validate create", "name", r.Name)
-
+	if len(r.Spec.Job.Template.Spec.Containers) == 0 {
+		return admission.Warnings{"SJ not created"}, fmt.Errorf("ScavengerJob must have at least one container")
+	}
+	for _, container := range r.Spec.Job.Template.Spec.Containers {
+		if container.Resources.Requests == nil {
+			return admission.Warnings{"SJ not created"}, fmt.Errorf("container %s does not have any Requests", container.Name)
+		}
+	}
 	if busy, _ := node.IsClusterBusy(context.Background(), wClient, log); busy {
-		return admission.Warnings{"SJ not created"}, fmt.Errorf("cluster is busy, not creating new scavneger jobs")
+		return admission.Warnings{"SJ not created"}, fmt.Errorf("cluster is busy, not creating new ScavengerJob")
 	}
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *ScavengerJob) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	log.Info("validate update", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object update.
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *ScavengerJob) ValidateDelete() (admission.Warnings, error) {
-	log.Info("validate delete", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object deletion.
 	return nil, nil
 }
