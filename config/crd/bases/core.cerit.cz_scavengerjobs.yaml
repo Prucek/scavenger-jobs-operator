@@ -34,10 +34,6 @@ spec:
           spec:
             description: ScavengerJobSpec defines the desired state of ScavengerJob
             properties:
-              foo:
-                description: Foo is an example field of ScavengerJob. Edit scavengerjob_types.go
-                  to remove/update
-                type: string
               job:
                 description: JobSpec describes how the job execution will look like.
                 properties:
@@ -8623,6 +8619,11 @@ spec:
                   format: date-time
                   type: string
                 type: array
+              lastCheckpoint:
+                format: date-time
+                type: string
+              message:
+                type: string
               runningTimeStamps:
                 items:
                   format: date-time
@@ -8632,7 +8633,6 @@ spec:
                 format: date-time
                 type: string
               status:
-                description: Job                    batch.JobStatus        `json:"job,omitempty"`
                 type: string
             type: object
         required:

@@ -21,30 +21,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // ScavengerJobSpec defines the desired state of ScavengerJob
 type ScavengerJobSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ScavengerJob. Edit scavengerjob_types.go to remove/update
-	Foo string        `json:"foo,omitempty"`
 	Job batch.JobSpec `json:"job"`
 }
 
 // ScavengerJobStatus defines the observed state of ScavengerJob
 type ScavengerJobStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Job                    batch.JobStatus        `json:"job,omitempty"`
 	Status                 ScavengerJobStatusType `json:"status,omitempty"`
 	StartTime              *metav1.Time           `json:"startTime,omitempty"`
 	InterruptionTimeStamps []metav1.Time          `json:"interruptionTimeStamps,omitempty"`
 	RunningTimeStamps      []metav1.Time          `json:"runningTimeStamps,omitempty"`
 	CompletionTimeStamp    *metav1.Time           `json:"completionTimeStamp,omitempty"`
+	LastCheckpoint         *metav1.Time           `json:"lastCheckpoint,omitempty"`
+	Message                string                 `json:"message,omitempty"`
 }
 
 type ScavengerJobStatusType string
