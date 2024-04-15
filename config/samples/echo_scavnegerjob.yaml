@@ -3,14 +3,31 @@ kind: ScavengerJob
 metadata:
   name: echo-scavengerjob
 spec:
-  foo: echo
   job:
     template:
       spec:
+        securityContext:
+          fsGroupChangePolicy: OnRootMismatch
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
         containers:
           - name: echo
             image: busybox
             command: ["echo", "Hello World!"]
-            imagePullPolicy: Never
-        restartPolicy: Never
+            imagePullPolicy: IfNotPresent
+            resources:
+              requests:
+                memory: "64Mi"
+                cpu: "250m"
+              limits:
+                memory: "128Mi"
+                cpu: "500m"
+            securityContext:
+              runAsUser: 1000
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+        restartPolicy: OnFailure
     backoffLimit: 1

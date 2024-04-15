@@ -9,14 +9,32 @@ metadata:
     app.kubernetes.io/created-by: scavenger-jobs-operator
   name: scavengerjob-sample
 spec:
-  foo: bar
   job:
     template:
       spec:
+        securityContext:
+          fsGroupChangePolicy: OnRootMismatch
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
         containers:
           - name: echo
             image: busybox
             command: ["echo", "Hello, World!"]
+            imagePullPolicy: IfNotPresent
+            resources:
+              requests:
+                memory: "64Mi"
+                cpu: "250m"
+              limits:
+                memory: "128Mi"
+                cpu: "500m"
+            securityContext:
+              runAsUser: 1000
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
         restartPolicy: Never
     backoffLimit: 1
 
