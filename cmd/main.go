@@ -44,7 +44,6 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
 	utilruntime.Must(sjapi.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
@@ -96,6 +95,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ScavengerJob")
 		os.Exit(1)
 	}
+	if err = (&controller.NodeReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ScavengerJob")
+		os.Exit(1)
+	}
+
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = (&sjapi.ScavengerJob{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ScavengerJob")
