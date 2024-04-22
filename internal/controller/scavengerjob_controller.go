@@ -131,12 +131,12 @@ func (r *ScavengerJobReconciler) handleJobCreation(ctx context.Context, scavenge
 		return false, nil
 	})
 	// Update scavenger job status
-	scavengerJob.Status.Status = sjapi.ScavengerJobStatusTypeRunning
 	if scavengerJob.Status.Status == sjapi.ScavengerJobStatusTypeInterrupted {
 		r.Log.Info("ScavengerJob is progressing again", "ScavengerJob", scavengerJob.Name)
 	} else {
 		scavengerJob.Status.StartTime = job.Status.StartTime
 	}
+	scavengerJob.Status.Status = sjapi.ScavengerJobStatusTypeRunning
 	scavengerJob.Status.RunningTimeStamps = append(scavengerJob.Status.RunningTimeStamps, *job.Status.StartTime)
 	if err := r.Status().Update(ctx, scavengerJob); err != nil {
 		return err
@@ -170,7 +170,7 @@ func (r *ScavengerJobReconciler) handleStatusUpdate(ctx context.Context, scaveng
 // propagatePodStatus propagates the status of the pod to the ScavengerJob
 func (r *ScavengerJobReconciler) propagatePodStatus(ctx context.Context, scavengerJob *sjapi.ScavengerJob) (sjapi.ScavengerJobStatusType, error) {
 	pods := &corev1.PodList{}
-	err := wait.PollUntilContextTimeout(ctx, 100*time.Millisecond, 5*time.Second, false, func(ctx context.Context) (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, 100*time.Millisecond, 10*time.Second, false, func(ctx context.Context) (bool, error) {
 		if err := r.List(ctx, pods, client.MatchingLabels{"job-name": scavengerJob.Name}); err != nil {
 			r.Log.Error(err, "unable to list pods", "pods", pods)
 			return false, err
