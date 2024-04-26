@@ -76,8 +76,8 @@ func (r *ScavengerJobReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			r.Log.Error(err, "unable to create Job for ScavengerJob", "ScavengerJob", scavengerJob.Name)
 		}
 
-	} else if scavengerJob.Status.Status == sjapi.ScavengerJobStatusTypeCompleted ||
-		scavengerJob.Status.Status == sjapi.ScavengerJobStatusTypeFailing {
+	} else if scavengerJob.Status.Status == sjapi.ScavengerJobStatusTypeSucceeded ||
+		scavengerJob.Status.Status == sjapi.ScavengerJobStatusTypeFailed {
 		// ScavengerJob has completed or is failing, so handle it
 		r.handleCompletedJob(ctx, scavengerJob)
 		return ctrl.Result{}, nil
@@ -182,7 +182,7 @@ func (r *ScavengerJobReconciler) propagatePodStatus(ctx context.Context, scaveng
 	})
 	if err != nil {
 		r.Log.Error(err, "No pods or more than 1 pod found for ScavengerJob", "ScavengerJob", scavengerJob.Name)
-		return sjapi.ScavengerJobStatusTypeFailing, err
+		return sjapi.ScavengerJobStatusTypeFailed, err
 	}
 	pod := pods.Items[0]
 	var statusChange sjapi.ScavengerJobStatusType
@@ -192,11 +192,11 @@ func (r *ScavengerJobReconciler) propagatePodStatus(ctx context.Context, scaveng
 	case "Running":
 		statusChange = sjapi.ScavengerJobStatusTypeRunning
 	case "Succeeded":
-		statusChange = sjapi.ScavengerJobStatusTypeCompleted
+		statusChange = sjapi.ScavengerJobStatusTypeSucceeded
 		now := metav1.NewTime(time.Now())
 		scavengerJob.Status.CompletionTimeStamp = &now
 	case "Failed":
-		statusChange = sjapi.ScavengerJobStatusTypeFailing
+		statusChange = sjapi.ScavengerJobStatusTypeFailed
 	}
 	return statusChange, nil
 }
@@ -287,7 +287,7 @@ func isCheckpointTime(scavengerJob *sjapi.ScavengerJob) bool {
 
 // handleCompletedJob handles the ScavengerJob that has completed
 func (r *ScavengerJobReconciler) handleCompletedJob(ctx context.Context, scavengerJob *sjapi.ScavengerJob) error {
-	if scavengerJob.Status.Status == sjapi.ScavengerJobStatusTypeFailing {
+	if scavengerJob.Status.Status == sjapi.ScavengerJobStatusTypeFailed {
 		r.Log.Info("ScavengerJob has failed", "ScavengerJob", scavengerJob.Name)
 	} else {
 		r.Log.Info("ScavengerJob has been completed", "ScavengerJob", scavengerJob.Name)

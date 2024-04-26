@@ -46,12 +46,11 @@ type ScavengerJobStatus struct {
 type ScavengerJobStatusType string
 
 const (
-	ScavengerJobStatusTypeNotStarted  ScavengerJobStatusType = "Not Started"
 	ScavengerJobStatusTypePending     ScavengerJobStatusType = "Pending"
 	ScavengerJobStatusTypeRunning     ScavengerJobStatusType = "Running"
 	ScavengerJobStatusTypeInterrupted ScavengerJobStatusType = "Interrupted"
-	ScavengerJobStatusTypeCompleted   ScavengerJobStatusType = "Completed"
-	ScavengerJobStatusTypeFailing     ScavengerJobStatusType = "Failing"
+	ScavengerJobStatusTypeSucceeded   ScavengerJobStatusType = "Succeeded"
+	ScavengerJobStatusTypeFailed      ScavengerJobStatusType = "Failed"
 )
 
 //+kubebuilder:object:root=true
