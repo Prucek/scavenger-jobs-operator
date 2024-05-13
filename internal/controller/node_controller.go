@@ -33,14 +33,12 @@ type NodeReconciler struct {
 func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.Log = log.FromContext(ctx)
 
-	busy, shouldKill := sjnode.IsClusterBusy(ctx, r.Client, r.Log)
-	if busy {
-		if shouldKill {
-			r.Log.Info("Node is busy, evicitng running jobs")
-			if err := r.evictSJ(ctx); err != nil {
-				r.Log.Error(err, "unable to delete Job candidates")
+	_, shouldKill := sjnode.IsClusterBusy(ctx, r.Client, r.Log)
+	if shouldKill {
+		r.Log.Info("Node is busy, evicting running jobs")
+		if err := r.evictSJ(ctx); err != nil {
+			r.Log.Error(err, "unable to delete Job candidate")
 
-			}
 		}
 	}
 
