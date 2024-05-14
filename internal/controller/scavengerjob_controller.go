@@ -225,8 +225,7 @@ func (r *ScavengerJobReconciler) handleLabelUpdate(ctx context.Context, scavenge
 func getSJRequestsSeconds(scavengerJob *sjapi.ScavengerJob) (cpuReq, memReq, gpuReq float64) {
 	sec := calculateRunTime(scavengerJob)
 	for _, container := range scavengerJob.Spec.Job.Template.Spec.Containers {
-		cpuf, _ := container.Resources.Requests.Cpu().AsDec().UnscaledBig().Float64()
-		cpuReq += cpuf / 1000
+		cpuReq += float64(container.Resources.Requests.Cpu().MilliValue()) / (1000 * 1000)
 		memf, _ := container.Resources.Requests.Memory().AsDec().UnscaledBig().Float64()
 		memReq += memf / GIGABYTE
 		// TODO add GPU compatibilty
@@ -243,6 +242,13 @@ func calculateRunTime(scavengerJob *sjapi.ScavengerJob) int {
 	now := time.Now()
 	duration := time.Duration(0)
 	lastRun := scavengerJob.Status.RunningTimeStamps[len(scavengerJob.Status.RunningTimeStamps)-1].Time
+	if len(scavengerJob.Status.InterruptionTimeStamps) > 0 {
+		lastIntTs := scavengerJob.Status.InterruptionTimeStamps[len(scavengerJob.Status.InterruptionTimeStamps)-1].Time
+		if lastIntTs.After(lastRun) {
+			// should not happen, the SJ should be running
+			return 0
+		}
+	}
 	duration = now.Sub(lastRun)
 	if scavengerJob.Status.LastCheckpoint != nil {
 		if scavengerJob.Status.LastCheckpoint.Time.After(lastRun) {
